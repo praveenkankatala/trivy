@@ -1,0 +1,97 @@
+# azure-pipelines.yml
+#
+# Trivy security scan for Azure DevOps.
+# Uses the official aquasec/trivy container.
+
+trigger:
+  - main
+
+pr:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  imageName: 'myapp:$(Build.BuildId)'
+  cacheDir: '$(Pipeline.Workspace)/.trivycache'
+
+stages:
+  # -------------------------------------------------------------------------
+  # Build stage
+  # -------------------------------------------------------------------------
+  - stage: Build
+    jobs:
+      - job: BuildImage
+        displayName: 'Build Docker Image'
+        steps:
+          - task: Docker@2
+            displayName: 'Build image'
+            inputs:
+              command: 'build'
+              Dockerfile: 'Dockerfile'
+              tags: '$(Build.BuildId)'
+              repository: 'myapp'
+
+  # -------------------------------------------------------------------------
+  # Scan stage
+  # -------------------------------------------------------------------------
+  - stage: SecurityScan
+    dependsOn: Build
+    jobs:
+      - job: TrivyScan
+        displayName: 'Trivy Security Scan'
+        steps:
+
+          # JSON report
+          - script: |
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v $(cacheDir):/root/.cache/ \
+                -v $(Build.ArtifactStagingDirectory):/reports \
+                aquasec/trivy:latest image \
+                  --severity HIGH,CRITICAL \
+                  --ignore-unfixed \
+                  --format json \
+                  --output /reports/trivy-report.json \
+                  $(imageName)
+            displayName: 'Trivy JSON scan'
+
+          # JUnit report (shows in Tests tab)
+          - script: |
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v $(cacheDir):/root/.cache/ \
+                -v $(Build.ArtifactStagingDirectory):/reports \
+                aquasec/trivy:latest image \
+                  --format template \
+                  --template "@contrib/junit.tpl" \
+                  --output /reports/trivy-junit.xml \
+                  $(imageName)
+            displayName: 'Trivy JUnit scan'
+
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '$(Build.ArtifactStagingDirectory)/trivy-junit.xml'
+              testRunTitle: 'Trivy Security Scan'
+
+          # Security gate — fail the build on CRITICAL
+          - script: |
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v $(cacheDir):/root/.cache/ \
+                aquasec/trivy:latest image \
+                  --severity CRITICAL \
+                  --ignore-unfixed \
+                  --exit-code 1 \
+                  $(imageName)
+            displayName: 'Enforce security gate'
+
+          - task: PublishBuildArtifacts@1
+            condition: always()
+            displayName: 'Publish scan reports'
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'TrivySecurityReports'

@@ -1,0 +1,91 @@
+// Jenkinsfile — Trivy security scan pipeline
+//
+// Builds a Docker image and runs three Trivy scans (JSON, HTML, SBOM).
+// Reports are archived as build artifacts.
+
+pipeline {
+    agent any
+
+    environment {
+        APP_DIR         = "."
+        DOCKER_IMAGE    = "python-trivy-demo"
+        IMAGE_NAME      = "${DOCKER_IMAGE}:${BUILD_NUMBER}"
+        TRIVY_CACHE_DIR = "${WORKSPACE}/.trivy_cache"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh "docker build -t ${IMAGE_NAME} ."
+                }
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh "mkdir -p ${TRIVY_CACHE_DIR} reports"
+
+                // JSON report (for automation)
+                sh """
+                trivy image \\
+                    --cache-dir ${TRIVY_CACHE_DIR} \\
+                    --severity HIGH,CRITICAL \\
+                    --ignore-unfixed \\
+                    --format json \\
+                    --output ${WORKSPACE}/reports/trivy-image.json \\
+                    ${IMAGE_NAME}
+                """
+
+                // HTML report (for humans)
+                sh """
+                trivy image \\
+                    --cache-dir ${TRIVY_CACHE_DIR} \\
+                    --format template \\
+                    --template @templates/html.tpl \\
+                    --output ${WORKSPACE}/reports/trivy-image.html \\
+                    ${IMAGE_NAME}
+                """
+
+                // SBOM (for compliance)
+                sh """
+                trivy image \\
+                    --cache-dir ${TRIVY_CACHE_DIR} \\
+                    --format cyclonedx \\
+                    --output ${WORKSPACE}/reports/sbom.json \\
+                    ${IMAGE_NAME}
+                """
+            }
+        }
+
+        stage('Enforce Security Gate') {
+            steps {
+                // Fail the build if there are unfixed CRITICAL issues
+                sh """
+                trivy image \\
+                    --cache-dir ${TRIVY_CACHE_DIR} \\
+                    --severity CRITICAL \\
+                    --ignore-unfixed \\
+                    --exit-code 1 \\
+                    ${IMAGE_NAME}
+                """
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'reports/*', fingerprint: true
+        }
+        failure {
+            echo 'Security scan failed — review reports/ for details.'
+        }
+    }
+}

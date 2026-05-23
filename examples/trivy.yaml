@@ -1,0 +1,70 @@
+# trivy.yaml — Trivy configuration file
+#
+# Place this in your project root. Trivy will pick it up automatically
+# so you don't need to repeat flags on every command.
+#
+# Override on the command line as needed:
+#   trivy image --severity LOW myimage:latest
+
+# ---------------------------------------------------------------------------
+# Severity filtering
+# ---------------------------------------------------------------------------
+severity:
+  - HIGH
+  - CRITICAL
+
+# ---------------------------------------------------------------------------
+# Vulnerability options
+# ---------------------------------------------------------------------------
+vulnerability:
+  # Hide vulnerabilities that have no fix available yet
+  ignore-unfixed: true
+  # Sources of vulnerability data
+  type:
+    - os
+    - library
+
+# ---------------------------------------------------------------------------
+# Scan options
+# ---------------------------------------------------------------------------
+scan:
+  # Skip these directories during filesystem scans
+  skip-dirs:
+    - ./tests/fixtures
+    - ./vendor
+    - ./node_modules
+  # Skip these specific files
+  skip-files:
+    - README.md
+    - CHANGELOG.md
+  # Enabled scanners
+  scanners:
+    - vuln
+    - secret
+    - misconfig
+
+# ---------------------------------------------------------------------------
+# Output format and exit behavior
+# ---------------------------------------------------------------------------
+format: table
+exit-code: 1
+quiet: false
+
+# ---------------------------------------------------------------------------
+# Cache
+# ---------------------------------------------------------------------------
+cache:
+  dir: .trivy-cache
+
+# ---------------------------------------------------------------------------
+# Secrets scanning
+# ---------------------------------------------------------------------------
+secret:
+  config: trivy-secret.yaml   # optional custom secret rules
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+db:
+  # How often to check for DB updates (24h default)
+  repository: ghcr.io/aquasecurity/trivy-db
