@@ -1,6 +1,6 @@
 # 🛡️ Trivy — The Complete Practical Guide
 
-> An end-to-end, plain-English guide to container, filesystem, repository, cloud, and Kubernetes security scanning with [Trivy](https://github.com/aquasecurity/trivy).
+> An end-to-end guide to container, filesystem, repository, cloud, and Kubernetes security scanning with [Trivy](https://github.com/aquasecurity/trivy).
 
 [![Trivy](https://img.shields.io/badge/Powered%20by-Trivy-1904DA?logo=aqua&logoColor=white)](https://github.com/aquasecurity/trivy)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
