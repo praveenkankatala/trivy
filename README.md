@@ -127,7 +127,7 @@ trivy image --severity HIGH,CRITICAL --ignore-unfixed python:3.10
 | 30 | Cheat Sheet | Common commands reference |
 | 31 | Glossary | Key terminology |
 
-📄 **[Read the full guide →](./Trivy_Complete_Practical_Guide.docx)**
+📄 **[Read the full guide →](./Trivy_Complete_Practical_Guide.pdf)**
 
 ---
 
