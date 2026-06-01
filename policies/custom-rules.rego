@@ -1,5 +1,5 @@
 # custom-rules.rego
-#
+# sample
 # Custom Trivy/OPA policies for Dockerfile and Kubernetes resources.
 # Run with:
 #   trivy config --policy ./policies/ --namespaces custom .
